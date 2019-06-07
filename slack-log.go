@@ -154,7 +154,11 @@ func (c *Client) Send() error {
 	if c.defaultFields != nil {
 		for k, v := range c.defaultFields {
 			// TODO: overwrite if already set ???
-			c.tmp.ctx.fields[k] = v
+			field := &Field{
+				Key: k,
+				Val: v,
+			}
+			c.tmp.ctx.fields = append(c.tmp.ctx.fields, field)
 		}
 	}
 

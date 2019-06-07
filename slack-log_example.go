@@ -89,9 +89,9 @@ func example_WithFields_test() {
 
 	err = client.
 		WithFields(ContextFields{
-			"id":     "userID",
-			"email":  "user@example.com",
-			"paying": true,
+			{Key: "id", Val: "userID"},
+			{Key: "email", Val: "user@example.com"},
+			{Key: "paying", Val: true},
 		}).
 		SetMessage("New user!").
 		SetColor(flatcolors.DarkerRed).

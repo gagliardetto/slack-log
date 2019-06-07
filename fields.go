@@ -22,8 +22,8 @@ func (c *Client) Log15(msg string, ctx ...interface{}) ClientInterface {
 	c.tmp.ctx.mu.Lock()
 	defer c.tmp.ctx.mu.Unlock()
 
-	for k, v := range keyVals(ctx...) {
-		c.tmp.ctx.fields[k] = v
+	for _, field := range keyVals(ctx...) {
+		c.tmp.ctx.fields = append(c.tmp.ctx.fields, field)
 	}
 	c.tmp.message = msg
 	return c
@@ -37,7 +37,13 @@ func (c *Client) WithField(key string, value interface{}) ClientInterface {
 	c.tmp.ctx.mu.Lock()
 	defer c.tmp.ctx.mu.Unlock()
 
-	c.tmp.ctx.fields[key] = value
+	// TODO: deduplicate fields with same name?
+	field := &Field{
+		Key: key,
+		Val: value,
+	}
+	c.tmp.ctx.fields = append(c.tmp.ctx.fields, field)
+
 	return c
 }
 
@@ -50,44 +56,52 @@ func (c *Client) WithFields(fields ContextFields) ClientInterface {
 	defer c.tmp.ctx.mu.Unlock()
 
 	for k := range fields {
-		c.tmp.ctx.fields[k] = fields[k]
+		c.tmp.ctx.fields = append(c.tmp.ctx.fields, fields[k])
 	}
 	return c
 }
 
-func keyVals(keyvals ...interface{}) map[string]interface{} {
+func keyVals(keyvals ...interface{}) []*Field {
 	if len(keyvals) == 0 {
 		return nil
 	}
-	meta := make(map[string]interface{}, (len(keyvals)+1)/2)
+	meta := make([]*Field, (len(keyvals)+1)/2)
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		var v interface{} = "MISSING"
 		if i+1 < len(keyvals) {
 			v = keyvals[i+1]
 		}
-		meta[fmt.Sprint(k)] = v
+		field := &Field{
+			Key: fmt.Sprint(k),
+			Val: v,
+		}
+		meta = append(meta, field)
 	}
 	return meta
 }
 
 // ContextFields is just map[string]interface{}
-type ContextFields map[string]interface{}
+type ContextFields []*Field
+type Field struct {
+	Key string
+	Val interface{}
+}
 
 func newCtx() *contextFields {
 	return &contextFields{
-		fields: make(ContextFields),
+		fields: make(ContextFields, 0),
 		mu:     &sync.RWMutex{},
 	}
 }
 
 func (f ContextFields) String() string {
 	s := ""
-	for k, v := range f {
+	for _, v := range f {
 		if s != "" {
 			s = s + "\n"
 		}
-		s = s + fmt.Sprintf("*%v* = %v", k, v)
+		s = s + fmt.Sprintf("*%v* = %v", v.Key, v.Val)
 	}
 	return s
 }

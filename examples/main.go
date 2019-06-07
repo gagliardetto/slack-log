@@ -23,10 +23,10 @@ func main() {
 
 	err = client.
 		WithFields(slacklog.ContextFields{
-			"foo":   "bar",
-			"bool":  true,
-			"int":   12345,
-			"float": 4.5678,
+			{Key: "foo", Val: "bar"},
+			{Key: "bool", Val: true},
+			{Key: "int", Val: 12345},
+			{Key: "float", Val: 4.5678},
 		}).
 		SetMessage("test message!").
 		SetColor(flatcolors.LightBlue2).
