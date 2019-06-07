@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	slacklog "github.com/gagliardetto/slack-log"
 	"github.com/gagliardetto/slack-log/emoji"
 	flatcolors "github.com/gagliardetto/slack-log/flat-colors"
@@ -10,7 +12,8 @@ func main() {
 	conf := &slacklog.Config{
 		Channel:  "#general",
 		Username: "system-name",
-		HookURL:  "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+		//HookURL:  "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+		HookURL: os.Getenv("SLACK_WEBHOOK"),
 	}
 
 	client, err := slacklog.New(conf)
@@ -20,11 +23,12 @@ func main() {
 
 	err = client.
 		WithFields(slacklog.ContextFields{
-			"id":     "userID",
-			"email":  "user@example.com",
-			"paying": true,
+			"foo":   "bar",
+			"bool":  true,
+			"int":   12345,
+			"float": 4.5678,
 		}).
-		SetMessage("New user!").
+		SetMessage("test message!").
 		SetColor(flatcolors.LightBlue2).
 		SetIcon(emoji.Smile).
 		Send()
