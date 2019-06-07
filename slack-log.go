@@ -161,7 +161,7 @@ func (c *Client) Send() error {
 	if c.tmp.ctx == nil || c.tmp.ctx.len() == 0 {
 		message = c.tmp.message
 	} else {
-		message = fmt.Sprintf("%v\n%v", c.tmp.message, c.tmp.ctx.fields.String())
+		message = c.tmp.ctx.fields.String()
 	}
 
 	attachment := map[string]interface{}{
@@ -188,9 +188,9 @@ func (c *Client) Send() error {
 		"attachments": []map[string]interface{}{
 			attachment,
 		},
+		"text":       c.tmp.message,
 		"channel":    channelName,
 		"username":   c.username,
-		"as_user":    false, // NOTE: as_user must be false in order for icon_emoji to work.
 		"icon_emoji": c.tmp.iconEmoji,
 	}
 
@@ -203,7 +203,7 @@ func (c *Client) Send() error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Content-Length", strconv.Itoa(len(jsonPayload)))
 
 	response, err := c.httpClient.Do(req)
