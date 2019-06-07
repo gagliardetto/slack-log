@@ -65,7 +65,7 @@ func keyVals(keyvals ...interface{}) []*Field {
 	if len(keyvals) == 0 {
 		return nil
 	}
-	meta := make([]*Field, (len(keyvals)+1)/2)
+	fields := make([]*Field, 0)
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		var v interface{} = "MISSING"
@@ -76,9 +76,9 @@ func keyVals(keyvals ...interface{}) []*Field {
 			Key: fmt.Sprint(k),
 			Val: v,
 		}
-		meta = append(meta, field)
+		fields = append(fields, field)
 	}
-	return meta
+	return fields
 }
 
 // ContextFields is just map[string]interface{}
