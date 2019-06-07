@@ -101,6 +101,9 @@ func (f ContextFields) String() string {
 		if s != "" {
 			s = s + "\n"
 		}
+		if v == nil {
+			continue
+		}
 		s = s + fmt.Sprintf("*%v* = %v", v.Key, v.Val)
 	}
 	return s
