@@ -190,6 +190,7 @@ func (c *Client) Send() error {
 		},
 		"channel":    channelName,
 		"username":   c.username,
+		"as_user":    false, // NOTE: as_user must be false in order for icon_emoji to work.
 		"icon_emoji": c.tmp.iconEmoji,
 	}
 
