@@ -11,6 +11,10 @@ type Block interface {
 	ToMap() M
 }
 
+type Msg interface {
+	Blocks() []M
+}
+
 type Type string
 
 const (
@@ -18,15 +22,10 @@ const (
 	MARKDOWN   Type = "mrkdwn"
 )
 
-type Header struct {
-	typ   Type
-	text  string
-	emoji bool
-}
-
 type Message struct {
 	blocks []Block
 }
+type M map[string]interface{}
 
 //
 func (msg *Message) AddBlock(bl Block) {
@@ -42,16 +41,14 @@ func (msg *Message) Validate() error {
 	}
 	return nil
 }
-func NewHeader() *Header {
-	return &Header{
-		typ: PLAIN_TEXT,
-	}
+
+type Header struct {
+	text  string
+	emoji bool
 }
 
-//
-func (bb *Header) Type(typ Type) *Header {
-	bb.typ = typ
-	return bb
+func NewHeader() *Header {
+	return &Header{}
 }
 
 //
@@ -66,14 +63,12 @@ func (bb *Header) Emoji(emoji bool) *Header {
 	return bb
 }
 
-type M map[string]interface{}
-
 //
 func (bb *Header) ToMap() M {
 	return M{
 		"type": "header",
 		"text": M{
-			"type":  bb.typ,
+			"type":  PLAIN_TEXT,
 			"text":  bb.text,
 			"emoji": bb.emoji,
 		},
@@ -82,9 +77,6 @@ func (bb *Header) ToMap() M {
 
 //
 func (bb *Header) Validate() error {
-	if bb.typ == "" {
-		return errors.New("type not set")
-	}
 	if bb.text == "" {
 		return errors.New("text not set")
 	}
@@ -114,6 +106,24 @@ func (bb *Section) Validate() error {
 			return fmt.Errorf("field #%v is not valid: %s", i, err)
 		}
 	}
+	return nil
+}
+
+type Divider struct{}
+
+func NewDivider() *Divider {
+	return &Divider{}
+}
+
+//
+func (bb *Divider) ToMap() M {
+	return M{
+		"type": "divider",
+	}
+}
+
+//
+func (bb *Divider) Validate() error {
 	return nil
 }
 
@@ -169,14 +179,85 @@ func (bb *SField) ToMap() M {
 	}
 }
 
+//
+func (bb *Message) Blocks() []M {
+	blocks := make([]M, 0)
+
+	for _, block := range bb.blocks {
+		blocks = append(blocks, block.ToMap())
+	}
+	return blocks
+}
 func Link(url string, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, text)
+}
+
+type Image struct {
+	title *Header
+	alt   string
+	url   string
+}
+
+func NewImage() *Image {
+	return &Image{
+		alt: "image",
+	}
+}
+
+//
+func (bb *Image) Title(title *Header) *Image {
+	bb.title = title
+	return bb
+}
+
+//
+func (bb *Image) URL(url string) *Image {
+	bb.url = url
+	return bb
+}
+
+//
+func (bb *Image) Alt(altText string) *Image {
+	bb.alt = altText
+	return bb
+}
+
+//
+func (bb *Image) ToMap() M {
+	m := M{
+		"type":      "image",
+		"image_url": bb.url,
+		"alt_text":  bb.alt,
+	}
+	if bb.title != nil {
+		m["title"] = M{
+			"type":  PLAIN_TEXT,
+			"text":  bb.title.text,
+			"emoji": bb.title.emoji,
+		}
+	}
+	return m
+}
+
+//
+func (bb *Image) Validate() error {
+	if bb.url == "" {
+		return errors.New("image_url not set")
+	}
+	if bb.alt == "" {
+		return errors.New("alt_text not set")
+	}
+	if bb.title != nil {
+		if err := bb.title.Validate(); err != nil {
+			return fmt.Errorf("error while validating title: %s", err)
+		}
+	}
+	return nil
 }
 func example_blocks() {
 	msg := &Message{}
 
 	header := NewHeader().
-		Type(PLAIN_TEXT).
 		Text("Hello world").
 		Emoji(true)
 
@@ -202,6 +283,16 @@ func example_blocks() {
 		)
 
 	msg.AddBlock(section2)
+
+	img := NewImage().
+		URL("https://i1.wp.com/thetempest.co/wp-content/uploads/2017/08/The-wise-words-of-Michael-Scott-Imgur-2.jpg?w=1024&ssl=1").
+		Alt("This is a quote").
+		Title(
+			NewHeader().
+				Emoji(true).
+				Text("An inspiring quote for *you*"),
+		)
+	msg.AddBlock(img)
 
 	if err := msg.Validate(); err != nil {
 		panic(err)

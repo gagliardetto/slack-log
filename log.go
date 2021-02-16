@@ -5,8 +5,29 @@ import (
 	"sync"
 )
 
+type LogMessage struct {
+	tmp *temporaryData
+}
+
+func NewLogMessage() *LogMessage {
+	return &LogMessage{
+		tmp: newTmp(),
+	}
+}
+
+type temporaryData struct {
+	ctx     *contextFields
+	message string
+}
+
+func newTmp() *temporaryData {
+	return &temporaryData{
+		ctx: newCtx(),
+	}
+}
+
 type contextFields struct {
-	fields ContextFields
+	fields Fields
 	mu     *sync.RWMutex
 }
 
@@ -15,7 +36,7 @@ func (cf *contextFields) len() int {
 }
 
 // Log15 lets you add context fields to the message in the style of Log15
-func (c *Client) Log15(msg string, ctx ...interface{}) ClientInterface {
+func (c *LogMessage) Log15(title string, ctx ...interface{}) *LogMessage {
 	if c.tmp == nil {
 		c.tmp = newTmp()
 	}
@@ -25,12 +46,12 @@ func (c *Client) Log15(msg string, ctx ...interface{}) ClientInterface {
 	for _, field := range keyVals(ctx...) {
 		c.tmp.ctx.fields = append(c.tmp.ctx.fields, field)
 	}
-	c.tmp.message = msg
+	c.tmp.message = title
 	return c
 }
 
 // WithField lets you add a context field to the message
-func (c *Client) WithField(key string, value interface{}) ClientInterface {
+func (c *LogMessage) WithField(key string, value interface{}) *LogMessage {
 	if c.tmp == nil {
 		c.tmp = newTmp()
 	}
@@ -48,7 +69,7 @@ func (c *Client) WithField(key string, value interface{}) ClientInterface {
 }
 
 // WithFields lets you add context fields to the message
-func (c *Client) WithFields(fields ContextFields) ClientInterface {
+func (c *LogMessage) WithFields(fields Fields) *LogMessage {
 	if c.tmp == nil {
 		c.tmp = newTmp()
 	}
@@ -81,8 +102,8 @@ func keyVals(keyvals ...interface{}) []*Field {
 	return fields
 }
 
-// ContextFields is just map[string]interface{}
-type ContextFields []*Field
+type Fields []*Field
+
 type Field struct {
 	Key string
 	Val interface{}
@@ -90,12 +111,12 @@ type Field struct {
 
 func newCtx() *contextFields {
 	return &contextFields{
-		fields: make(ContextFields, 0),
+		fields: make(Fields, 0),
 		mu:     &sync.RWMutex{},
 	}
 }
 
-func (f ContextFields) String() string {
+func (f Fields) String() string {
 	s := ""
 	for _, v := range f {
 		if s != "" {
@@ -107,4 +128,53 @@ func (f ContextFields) String() string {
 		s = s + fmt.Sprintf("*%v* = %v", v.Key, v.Val)
 	}
 	return s
+}
+
+// SetTitle sets the main message text
+func (c *LogMessage) SetTitle(msg string) *LogMessage {
+	if c.tmp == nil {
+		c.tmp = newTmp()
+	}
+
+	c.tmp.message = msg
+	return c
+}
+
+//
+func (bb *LogMessage) Validate() error {
+	return nil
+}
+
+//
+func (lm *LogMessage) Blocks() []M {
+
+	msg := &Message{}
+
+	if lm.tmp.message != "" {
+		header := NewHeader().
+			Text(lm.tmp.message).
+			Emoji(true)
+
+		msg.AddBlock(header)
+	}
+
+	{
+		if lm.tmp.ctx.len() > 0 {
+			section := NewSection().
+				AddField(
+					NewField().
+						Type(MARKDOWN).
+						Text(
+							lm.tmp.ctx.fields.String(),
+						),
+				)
+			msg.AddBlock(section)
+		}
+	}
+
+	if err := msg.Validate(); err != nil {
+		panic(err)
+	}
+
+	return msg.Blocks()
 }
